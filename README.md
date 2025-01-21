@@ -4,4 +4,9 @@ A Speech Emotion Recognition Model that records audio and predicts an emotion fr
 
 Always run Main.py file, even if changes are made to other files.
 
-Datasets should be downloaded and kept in a folder called "Datasets", in the same code directory. Link to datasets are given here -> 
+Include .env file in code directory. 
+
+Datasets should be downloaded and kept in a folder called "Datasets", in the same code directory. 
+Link to datasets are given here -> 
+
+If any changes to code are needed, commit the file over. 
