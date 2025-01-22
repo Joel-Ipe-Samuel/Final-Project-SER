@@ -11,4 +11,8 @@ def terprocess(text):
 
     # Decode the output
     emotion = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    print(f"Detected emotion: {emotion}")
+    filename="Emotions.txt"
+    with open(filename, "a") as file:
+         file.write(f"TER: {emotion}\n")
+
+    
