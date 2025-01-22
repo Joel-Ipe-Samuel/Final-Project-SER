@@ -1,5 +1,3 @@
-# ser.py
-
 import os
 import torch
 import pickle
@@ -9,6 +7,7 @@ from dotenv import load_dotenv
 import warnings
 
 warnings.filterwarnings("ignore")
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # Load environment variables
 load_dotenv()
@@ -42,4 +41,5 @@ def predict_emotion(audio_path):
     filenameemo="Emotions.txt"
     with open(filenameemo, "a") as file:
         file.write(f"SER: {emotion}\n")
-        file.write(f"FER: happy\n")
+        file.write(f"FER: Sad\n")
+

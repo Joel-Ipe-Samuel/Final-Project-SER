@@ -1,9 +1,18 @@
 from elevenlabs import ElevenLabs
 import os
-import pygame
+import sys
+import warnings
+warnings.filterwarnings("ignore")
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
+with open(os.devnull, 'w') as f:
+    old_stdout = sys.stdout
+    sys.stdout = f
+    import pygame  # Import pygame while stdout is redirected
+    sys.stdout = old_stdout
 
 # Initialize the ElevenLabs API
-api = ElevenLabs(api_key="your api key")
+api = ElevenLabs(api_key="sk_b8d1b0c7c7a2d50818336be88deac96d726870d1a5a1c69b")
 
 # Function to perform TTS
 def text_to_speech():
@@ -23,7 +32,7 @@ def text_to_speech():
             print("Error: The file is empty.")
             return
         
-        print("Analysing...")
+        print("\nAnalysing...")
         
         # Generate audio using the text
         audio_generator = api.generate(

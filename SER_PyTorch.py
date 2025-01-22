@@ -9,6 +9,9 @@ from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import KFold
 import matplotlib.pyplot as plt
 from Modules import EnhancedSERModel
+import warnings
+warnings.filterwarnings("ignore")
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # Enable cuDNN autotuner for faster convolutions
 torch.backends.cudnn.benchmark = True

@@ -1,13 +1,12 @@
 import whisper
-import numpy as np
 import torch
-import jiwer  # Library for calculating Word Error Rate (WER)
 import librosa
-
+import warnings
+warnings.filterwarnings("ignore")
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # Check if CUDA (GPU) is available
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"Using device: {device}")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Initialize the model (load to the appropriate device)
 model = whisper.load_model("medium").to(device)  #potentially need large model for longer sequeces of inputs 

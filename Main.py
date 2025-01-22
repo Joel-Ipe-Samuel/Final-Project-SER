@@ -1,10 +1,7 @@
-# main.py
-
-import os
 import numpy as np
 import sounddevice as sd
 from scipy.io.wavfile import write
-from SER import predict_emotion  # Import the predict_emotion function from ser.py
+from SER import predict_emotion 
 from Transcribe import process_audio_from_file
 from TER import terprocess
 from Llama_Model import chat
@@ -13,6 +10,7 @@ from pynput import keyboard
 from Final_Emotion import read_emotions_from_file, determine_common_emotion
 import warnings
 warnings.filterwarnings("ignore")
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # Global variables
 SAMPLE_RATE = 16000
@@ -23,7 +21,7 @@ exit_program = False
 # Function to record audio
 def record_audio_toggle(sample_rate):
     global is_recording, audio_data_buffer
-    print("Press 'b' to start/stop recording.")
+    print("\nPress 'b' to start/stop recording.")
     
     def callback(indata, frames, time, status):
         if is_recording:
@@ -45,7 +43,7 @@ def save_audio(audio_data, file_path, sample_rate):
 
 # Main script
 if __name__ == "__main__":
-    print("\nPress 'b' to start/stop recording and 'q' to quit.\n")
+    print("\nPress 'b' to start/stop recording and 'q' to quit.")
 
     def on_press(key):
         global is_recording, exit_program
@@ -54,12 +52,14 @@ if __name__ == "__main__":
                 is_recording = not is_recording
                 if is_recording:
                     print("Recording started...")
+                    #start_camera()
                 else:
                     print("Recording stopped.")
+                    #stop_camera()
             elif key.char == 'q':
                 exit_program = True
-                print("Exiting program...")
-                return False  # Stop listener
+                print("\nExiting program...")
+                exit
         except AttributeError:
             pass
 
@@ -87,7 +87,7 @@ if __name__ == "__main__":
                 user_text = file.read().strip()
 
             if not user_text:
-                print("Error: The file is empty.")
+                print("\nError: The file is empty.")
             else:
                 # TER Model (text emotion recognition)
                 terprocess(user_text)
@@ -97,11 +97,12 @@ if __name__ == "__main__":
                 if "SER" in emotions and "FER" in emotions and "TER" in emotions:
                 # Determine the common emotion
                     common_emotion = determine_common_emotion(emotions)
+                    print(common_emotion)
                 else:
-                    print("Error: Not all emotion models are available in the file.")
+                    print("\nError: Not all emotion models are available in the file.")
 
                 # Model response using chat
-                chat(user_text, emotions)
+                chat(user_text, common_emotion)
 
                 # Text-to-speech conversion
                 text_to_speech()

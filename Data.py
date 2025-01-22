@@ -6,6 +6,9 @@ from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.utils import resample
 from imblearn.over_sampling import SMOTE
 from Modules import extract_features
+import warnings
+warnings.filterwarnings("ignore")
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # Function to apply Gaussian noise
 def add_gaussian_noise(signal, noise_factor=0.005):

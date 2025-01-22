@@ -1,9 +1,12 @@
 import re
+import warnings
+warnings.filterwarnings("ignore")
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # Synonym mapping for emotions (adjust as needed)
 emotion_synonyms = {
-    "happy": ["joy", "content", "pleasure", "cheerful", "joyful"],
-    "sad": ["unhappy", "depressed", "sorrow", "down", "gloomy"],
+    "happy": ["joy", "content", "pleasure", "cheerful", "joyful","happiness"],
+    "sad": ["unhappy", "depressed", "sorrow", "down", "gloomy","sadness"],
     "angry": ["mad", "frustrated", "irritated", "enraged","anger"],
     "fearful": ["scared", "afraid", "terrified", "nervous","fear"],
     "surprised": ["shocked", "amazed", "astonished","surprise"],

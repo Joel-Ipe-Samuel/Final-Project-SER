@@ -7,7 +7,7 @@ import torch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load the processor and model, then move the model to the selected device
-processor = AutoImageProcessor.from_pretrained("dima806/facial_emotions_image_detection")
+processor = AutoImageProcessor.from_pretrained("dima806/facial_emotions_image_detection", use_fast=True)
 model = AutoModelForImageClassification.from_pretrained("dima806/facial_emotions_image_detection").to(device)
 
 # Optional: Display model summary

@@ -1,10 +1,12 @@
 import re
 from openai import OpenAI
-from TTS_Model import text_to_speech
+import warnings
+warnings.filterwarnings("ignore")
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 client = OpenAI(
     base_url="https://integrate.api.nvidia.com/v1",
-    api_key="your api key"  
+    api_key="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"  
 )
 
 def clean_output(text):
@@ -17,7 +19,7 @@ def chat(user_input, emotion=None):
 
     # If an emotion is provided, append it to the user input for context
     if emotion:
-        user_input = f"[Emotion: {emotion}] {user_input}"
+        user_input = f"[Emotion: {emotion} (this is the users feeling so respond in a way to help the user and give output that aids in this, example: if user is sad or angry, calm the user down. If user is happy then share the same energy, accordingly do this for any other emotions of the user too, hope u get me)] {user_input}"
 
     conversation_history.append({"role": "user", "content": user_input})
 
@@ -25,7 +27,7 @@ def chat(user_input, emotion=None):
         
     # Make the API call to get a response from the model
     completion = client.chat.completions.create(
-        model="meta/llama-3.1-70b-instruct",
+        model="meta/llama-3.3-70b-instruct",
         messages=conversation_history,
         temperature=0.2,
         top_p=0.7,
@@ -41,8 +43,6 @@ def chat(user_input, emotion=None):
             cleaned_response = clean_output(content_chunk)
                          
     conversation_history.append({"role": "assistant", "content": model_response})
-        
-    print("\n")  # For better formatting in output
 
     # Save the model's response to a file
     file_path = r'Model Response.txt'

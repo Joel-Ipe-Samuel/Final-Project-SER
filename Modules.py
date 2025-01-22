@@ -2,6 +2,9 @@ import torch.nn as nn
 import numpy as np
 import librosa
 import numpy as np
+import warnings
+warnings.filterwarnings("ignore")
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # Enhanced Neural Network Model with Conv1D, LSTM, and Attention
 class EnhancedSERModel(nn.Module):
