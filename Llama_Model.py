@@ -6,7 +6,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 client = OpenAI(
     base_url="https://integrate.api.nvidia.com/v1",
-    api_key="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"  
+    api_key="your api key"  
 )
 
 def clean_output(text):
