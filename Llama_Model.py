@@ -4,7 +4,7 @@ from TTS_Model import text_to_speech
 
 client = OpenAI(
     base_url="https://integrate.api.nvidia.com/v1",
-    api_key="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"  
+    api_key="your api key"  
 )
 
 def clean_output(text):
