@@ -1,45 +1,26 @@
+# main.py
+
 import os
-import torch
-import pickle
 import numpy as np
 import sounddevice as sd
-import librosa
-import openai
 from scipy.io.wavfile import write
-from Modules import EnhancedSERModel, extract_features
-from transcribe import load_audio, process_audio_from_file
-from pynput import keyboard  # For handling key events
-global is_recording, exit_program
-from dotenv import load_dotenv
+from SER import predict_emotion  # Import the predict_emotion function from ser.py
+from Transcribe import process_audio_from_file
+from TER import terprocess
+from Llama_Model import chat
+from TTS_Model import text_to_speech
+from pynput import keyboard
+from Final_Emotion import read_emotions_from_file, determine_common_emotion
+import warnings
+warnings.filterwarnings("ignore")
 
-load_dotenv()
-openai.api_key = os.getenv("joemama")
-
-# Audio recording settings
-SAMPLE_RATE = 16000  # 16 kHz for compatibility
-
-# Device setup
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# Load saved SER model
-model_path = os.path.join("Saved Models", "Best Overall Model.pth")
-input_size = 128 + 40 + 12 + 7  # Adjust based on feature extraction in data.py
-num_classes = 7  # Example: Adjust to your dataset
-model = EnhancedSERModel(input_size, num_classes).to(device)
-model.load_state_dict(torch.load(model_path, map_location=device))
-model.eval()
-
-# Load encoder
-encoder_path = os.path.join("Datasets", "Processed Data", "encoder.pkl")
-with open(encoder_path, 'rb') as file:
-    encoder = pickle.load(file)
-
-# Global variables for recording state
+# Global variables
+SAMPLE_RATE = 16000
 is_recording = False
 audio_data_buffer = []
 exit_program = False
 
-# Function to handle recording logic
+# Function to record audio
 def record_audio_toggle(sample_rate):
     global is_recording, audio_data_buffer
     print("Press 'b' to start/stop recording.")
@@ -62,29 +43,9 @@ def record_audio_toggle(sample_rate):
 def save_audio(audio_data, file_path, sample_rate):
     write(file_path, sample_rate, (audio_data * 32767).astype(np.int16))
 
-# Function to perform emotion prediction
-def predict_emotion(audio_path):
-    signal, sr = librosa.load(audio_path, sr=SAMPLE_RATE)
-    features, _ = extract_features(signal, sr)
-    features = torch.tensor(features, dtype=torch.float32).unsqueeze(0).to(device)
-    with torch.no_grad():
-        outputs = model(features)
-        _, predicted = torch.max(outputs, 1)
-    emotion = encoder.inverse_transform(predicted.cpu().numpy())[0]
-    return emotion
-
-# Function to convert speech to text using OpenAI Whisper API
-def speech_to_text(audio_file_path):
-    with open(audio_file_path, "rb") as audio_file:
-        response = openai.audio.transcriptions.create(
-            file=audio_file,
-            model="whisper-1",
-        )
-    return response['text']
-
 # Main script
 if __name__ == "__main__":
-    print("Press 'b' to start/stop recording and 'q' to quit.")
+    print("\nPress 'b' to start/stop recording and 'q' to quit.\n")
 
     def on_press(key):
         global is_recording, exit_program
@@ -107,20 +68,60 @@ if __name__ == "__main__":
 
     while not exit_program:
         if is_recording:
+            # Record audio
             audio_data = record_audio_toggle(SAMPLE_RATE)
 
             # Save recorded audio
             audio_file_path = "Recording.wav"
             save_audio(audio_data, audio_file_path, SAMPLE_RATE)
 
-            # Predict emotion
-            predicted_emotion = predict_emotion(audio_file_path)
-            print(f"Predicted Emotion: {predicted_emotion}")
+            # Predict emotion using the SER model
+            predict_emotion(audio_file_path)
 
-            # Convert speech to text
-            transcription = process_audio_from_file(audio_file_path)
+            # Convert speech to text (if needed)
+            process_audio_from_file(audio_file_path)
+
+            # Access user input text
+            user_file_path = "User Response.txt"
+            with open(user_file_path, "r") as file:
+                user_text = file.read().strip()
+
+            if not user_text:
+                print("Error: The file is empty.")
+            else:
+                # TER Model (text emotion recognition)
+                terprocess(user_text)
+                emotions = read_emotions_from_file()
+
+                # Check if we have all the required emotions
+                if "SER" in emotions and "FER" in emotions and "TER" in emotions:
+                # Determine the common emotion
+                    common_emotion = determine_common_emotion(emotions)
+                else:
+                    print("Error: Not all emotion models are available in the file.")
+
+                # Model response using chat
+                chat(user_text, emotions)
+
+                # Text-to-speech conversion
+                text_to_speech()
+            
+            # Clear the file content after processing
+            file_path1=r'Emotions.txt'
+            file_path2=r'User Response.txt'
+            file_path3=r'Model Response.txt'
+            
+            with open(file_path1, "w") as file:
+                pass
+                        
+            with open(file_path2, "w") as file:
+                pass
+            
+            with open(file_path3, "w") as file:
+                pass
+            
             # Prompt user to redo recording
-            redo = input("Do you want to redo the recording? (y/n): ").strip().lower()
+            redo = input("\nDo you want to redo the recording? (y/n): ").strip().lower()
             if redo == 'y':
                 print("\nRedoing the recording...\nPress 'b' to start/stop recording and 'q' to quit.")
             else:
