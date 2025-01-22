@@ -3,7 +3,7 @@ import os
 import pygame
 
 # Initialize the ElevenLabs API
-api = ElevenLabs(api_key="sk_63775d56ff418b7510cf298e3af8156177f3e0bc5d986247")
+api = ElevenLabs(api_key="your api key")
 
 # Function to perform TTS
 def text_to_speech():
