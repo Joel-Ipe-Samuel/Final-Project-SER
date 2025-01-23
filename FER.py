@@ -2,6 +2,7 @@ import cv2
 from transformers import AutoImageProcessor, AutoModelForImageClassification
 from PIL import Image
 import torch
+from cv2 import CAP_DSHOW
 
 # Check if CUDA is available and set the device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -14,7 +15,7 @@ model = AutoModelForImageClassification.from_pretrained("dima806/facial_emotions
 print(model)
 
 # Initialize webcam
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0, CAP_DSHOW)
 
 while True:
     # Capture frame-by-frame
