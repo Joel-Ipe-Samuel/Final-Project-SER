@@ -8,6 +8,7 @@ from Llama_Model import chat
 from TTS_Model import text_to_speech
 from pynput import keyboard
 from Final_Emotion import read_emotions_from_file, determine_common_emotion
+from FER import start_camera, stop_camera, write_emotion_to_file 
 import warnings
 warnings.filterwarnings("ignore")
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -52,10 +53,10 @@ if __name__ == "__main__":
                 is_recording = not is_recording
                 if is_recording:
                     print("Recording started...")
-                    #start_camera()
+                    start_camera()
                 else:
                     print("Recording stopped.")
-                    #stop_camera()
+                    stop_camera()
             elif key.char == 'q':
                 exit_program = True
                 print("\nExiting program...")
@@ -97,7 +98,6 @@ if __name__ == "__main__":
                 if "SER" in emotions and "FER" in emotions and "TER" in emotions:
                 # Determine the common emotion
                     common_emotion = determine_common_emotion(emotions)
-                    print(common_emotion)
                 else:
                     print("\nError: Not all emotion models are available in the file.")
 
@@ -128,3 +128,5 @@ if __name__ == "__main__":
             else:
                 print("Proceeding...")
                 break
+    listener.stop()
+

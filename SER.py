@@ -41,5 +41,4 @@ def predict_emotion(audio_path):
     filenameemo="Emotions.txt"
     with open(filenameemo, "a") as file:
         file.write(f"SER: {emotion}\n")
-        file.write(f"FER: Sad\n")
 
