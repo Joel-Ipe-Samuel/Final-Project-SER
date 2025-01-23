@@ -3,14 +3,10 @@ import torch
 import pickle
 import librosa
 from Modules import EnhancedSERModel, extract_features
-from dotenv import load_dotenv
 import warnings
 
 warnings.filterwarnings("ignore")
 warnings.simplefilter(action='ignore', category=FutureWarning)
-
-# Load environment variables
-load_dotenv()
 
 # Audio settings and device setup
 SAMPLE_RATE = 16000  # 16 kHz for compatibility
