@@ -8,7 +8,7 @@ from Llama_Model import chat
 from TTS_Model import text_to_speech
 from pynput import keyboard
 from Final_Emotion import read_emotions_from_file, determine_common_emotion
-from FER import start_camera, stop_camera, write_emotion_to_file 
+from FER import start_camera, stop_camera 
 import warnings
 warnings.filterwarnings("ignore")
 warnings.simplefilter(action='ignore', category=FutureWarning)
