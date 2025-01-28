@@ -12,7 +12,7 @@ with open(os.devnull, 'w') as f:
     sys.stdout = old_stdout
 
 # Initialize the ElevenLabs API
-api = ElevenLabs(api_key="Your API Key")
+api = ElevenLabs(api_key="sk_c6cadc07ff42261bf840b568d0a06ae51377b184d67984bd")
 
 # Function to perform TTS
 def text_to_speech():

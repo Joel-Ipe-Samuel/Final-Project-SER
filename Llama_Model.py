@@ -6,7 +6,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 client = OpenAI(
     base_url="https://integrate.api.nvidia.com/v1",
-    api_key="Your API Key"  
+    api_key="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"  
 )
 
 def clean_output(text):
@@ -15,11 +15,12 @@ def clean_output(text):
 
 def chat(user_input, emotion=None):
     # Initialize conversation history
-    conversation_history = []
-
+    if 'conversation_history' not in globals():
+        global conversation_history
+        conversation_history = []
     # If an emotion is provided, append it to the user input for context
     if emotion:
-        user_input = f"[Emotion: {emotion} (this is the users feeling so respond in a way to help the user and give output that aids in this, example: if user is sad or angry, calm the user down. If user is happy then share the same energy, accordingly do this for any other emotions of the user too, hope u get me)] {user_input}"
+        user_input = f"[Emotion: {emotion}] {user_input}"
 
     conversation_history.append({"role": "user", "content": user_input})
 
@@ -27,7 +28,7 @@ def chat(user_input, emotion=None):
         
     # Make the API call to get a response from the model
     completion = client.chat.completions.create(
-        model="meta/llama-3.3-70b-instruct",
+        model="meta/llama-3.1-8b-instruct",
         messages=conversation_history,
         temperature=0.2,
         top_p=0.7,
@@ -40,7 +41,7 @@ def chat(user_input, emotion=None):
         if hasattr(chunk.choices[0].delta, "content") and chunk.choices[0].delta.content is not None:
             content_chunk = chunk.choices[0].delta.content
             model_response += content_chunk
-            cleaned_response = clean_output(content_chunk)
+            clean_output(content_chunk)
                          
     conversation_history.append({"role": "assistant", "content": model_response})
 

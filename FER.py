@@ -21,6 +21,7 @@ lock = Lock()
 
 
 def start_camera():
+    """Start the camera and begin processing frames."""
     global cap, camera_active, emotions_collected
     cap = cv2.VideoCapture(0, CAP_DSHOW)
     camera_active = True
@@ -42,6 +43,7 @@ def stop_camera():
 
 
 def process_emotions():
+    """Continuously process frames and store emotions while the camera is active."""
     global emotions_collected, camera_active
     while camera_active:
         ret, frame = cap.read()
@@ -75,6 +77,7 @@ def process_emotions():
 
 
 def write_emotion_to_file():
+    """Write the most common emotion to the 'Emotions.txt' file."""
     global emotions_collected
     with lock:
         if emotions_collected:
