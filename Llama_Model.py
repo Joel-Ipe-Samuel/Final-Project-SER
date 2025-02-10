@@ -1,52 +1,76 @@
-import re
-from openai import OpenAI
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import torch
 import warnings
 warnings.filterwarnings("ignore")
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-client = OpenAI(
-    base_url="https://integrate.api.nvidia.com/v1",
-    api_key="Your_API_Key"  
-)
-
-def clean_output(text):
-    cleaned_text = re.sub(r"[^A-Za-z0-9\s.,!?;:'\"(){}\[\]-]", "", text)
-    return cleaned_text
-
-def chat(user_input, emotion=None):
-    # Initialize conversation history
+def chat_with_model(user_input, emotion):
+    
     if 'conversation_history' not in globals():
         global conversation_history
         conversation_history = []
-    # If an emotion is provided, append it to the user input for context
-    if emotion:
-        user_input = f"[Emotion: {emotion}] {user_input}"
-
-    conversation_history.append({"role": "user", "content": user_input})
-
-    model_response = ""
         
-    # Make the API call to get a response from the model
-    completion = client.chat.completions.create(
-        model="meta/llama-3.1-8b-instruct",
-        messages=conversation_history,
-        temperature=0.2,
-        top_p=0.7,
-        max_tokens=4096,
-        stream=True
-    )
-            
-    # Process the response from the model
-    for chunk in completion:
-        if hasattr(chunk.choices[0].delta, "content") and chunk.choices[0].delta.content is not None:
-            content_chunk = chunk.choices[0].delta.content
-            model_response += content_chunk
-            clean_output(content_chunk)
-                         
-    conversation_history.append({"role": "assistant", "content": model_response})
+    # 🔹 Load the fine-tuned model
+    model_id = "meta-llama/Llama-3.2-3B-Instruct"  # Use the fine-tuned model directory
+    dtype = torch.bfloat16
 
-    # Save the model's response to a file
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+    # Set pad token manually if not defined
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token  # Use EOS as PAD
+
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id,
+        device_map="cuda",
+        torch_dtype=dtype,
+    )
+
+    # 🔹 Update conversation history with user input and emotion
+    # Add emotion dynamically to user input and structure in model's chat format
+    chat = conversation_history + [
+        {
+            "role": "system",
+            "content": "You are a mental health therapy model, hence consider user emotion provided before responding"
+        },
+        {
+            "role": "user",
+            "content": f"[Emotion: {emotion}] {user_input.strip()}"
+        }
+    ]
+
+    # 🔹 Convert chat to model input format using apply_chat_template
+    prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
+    inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
+    # Move inputs to GPU and ensure attention_mask is set
+    inputs = {k: v.to(model.device) for k, v in inputs.items()}
+
+    # 🔹 Generate response with proper padding handling
+    outputs = model.generate(
+            **inputs,
+            max_new_tokens=1024,  # Limit the response length
+            temperature=0.75,  # Control randomness
+            top_p=0.95,  # Nucleus sampling (cumulative probability threshold)
+            repetition_penalty=1.05,
+            pad_token_id=tokenizer.eos_token_id,  # Padding token
+            do_sample=True  # Ensure sampling
+        )
+        # 🔹 Decode the generated response
+    response = tokenizer.decode(outputs[0], skip_special_tokens=False)
+    
+    if response.startswith("<|begin_of_text|>"):
+        response = response[len("<|begin_of_text|>"):]
+        
+    # The assistant's response will come after the last "<|eot_id|>" and "<|start_header_id|>assistant<|end_header_id|>"
+    assistant_response = response.split("<|start_header_id|>assistant<|end_header_id|>\n\n")[-1].split("<|eot_id|>")[0].strip()
+
+    # Update the conversation history with the assistant's response
+    conversation_history.append({
+        "role": "assistant",
+        "content": assistant_response
+    })
+    
     file_path = r'Model Response.txt'
     with open(file_path, "a") as file:
-        file.write(model_response)
-    
+        file.write(assistant_response)
+
