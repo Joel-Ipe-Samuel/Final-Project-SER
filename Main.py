@@ -4,7 +4,7 @@ from scipy.io.wavfile import write
 from SER import predict_emotion 
 from Transcribe import process_audio_from_file
 from TER import terprocess
-from Llama_Model import chat
+from Llama_Model import chat_with_model
 from TTS_Model import text_to_speech
 from pynput import keyboard
 from Final_Emotion import read_emotions_from_file, determine_common_emotion
@@ -102,7 +102,7 @@ if __name__ == "__main__":
                     print("\nError: Not all emotion models are available in the file.")
 
                 # Model response using chat
-                chat(user_text, common_emotion)
+                chat_with_model(user_text, common_emotion)
 
                 # Text-to-speech conversion
                 text_to_speech()
