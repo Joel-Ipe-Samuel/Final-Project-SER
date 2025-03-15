@@ -1,22 +1,17 @@
 import numpy as np
 import sounddevice as sd
-import torch
 from scipy.io.wavfile import write
 from SER import predict_emotion 
 from Transcribe import process_audio_from_file
 from TER import terprocess
-from Llama_Model import chat_with_model
+from Llama_Model import chat_with_model, conversation_history, generate_summary
 from TTS_Model import text_to_speech
 from pynput import keyboard
-from huggingface_hub import login
-from transformers import pipeline
 from Final_Emotion import read_emotions_from_file, determine_common_emotion
 from FER import start_camera, stop_camera 
 import warnings
 warnings.filterwarnings("ignore")
 warnings.simplefilter(action='ignore', category=FutureWarning)
-
-login("insert_huggingface_token")
 
 # Global variables
 SAMPLE_RATE = 16000
@@ -131,6 +126,12 @@ if __name__ == "__main__":
             if redo == 'y':
                 print("\nRedoing the recording...\nPress 'b' to start/stop recording and 'q' to quit.")
             else:
-                print("Proceeding...")
+                 # 🔹 Generate summary before exiting
+                if conversation_history:  # Ensure the history isn't empty
+                    generate_summary(conversation_history)
+                else:
+                    print("\nNo conversation history found to summarize.")
+                # Exit loop after generating summary
                 break
     listener.stop()
+
