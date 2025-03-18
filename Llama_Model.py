@@ -34,9 +34,8 @@ END_PHRASES = [
 ]
 
 def generate_summary(conversation_history):
-    """
-    Generates a structured summary of the conversation history.
-    """
+    global conversation_turns
+    
     if not conversation_history:
         return "No conversation history available to summarize."
 
@@ -87,11 +86,15 @@ def generate_summary(conversation_history):
         summary = clean_text[summary_matches[-1]:].strip()
     else:
         summary = clean_text  # Fallback in case "Summary:" is missing
-
+    
     # Save the clean summary
     with open("Therapist_Summary.txt", "w") as file:
         file.write(summary)
-
+    
+    with open("Model Response.txt", "a") as file:
+        file.write("Thank you for sharing with me. Before we wrap up, I want to assure you that our conversation remains completely confidential and safe. I've also provided a summary of what we discussed, along with some recommendations for therapists should you wish to seek further support. Wishing you strength and healing, take care.")
+    conversation_history=[]
+    conversation_turns=0
 
 def chat_with_model(user_input, emotion):
     global conversation_turns, conversation_history  # Declare globals
@@ -148,4 +151,3 @@ def chat_with_model(user_input, emotion):
     # Save response to file
     with open("Model Response.txt", "a") as file:
         file.write(assistant_response + "\n")
-
