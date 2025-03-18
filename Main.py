@@ -1,137 +1,201 @@
+from flask import Flask, jsonify
 import numpy as np
 import sounddevice as sd
 from scipy.io.wavfile import write
-from SER import predict_emotion 
+from SER import predict_emotion
 from Transcribe import process_audio_from_file
 from TER import terprocess
 from Llama_Model import chat_with_model, conversation_history, generate_summary
 from TTS_Model import text_to_speech
-from pynput import keyboard
 from Final_Emotion import read_emotions_from_file, determine_common_emotion
-from FER import start_camera, stop_camera 
+from FER import start_camera, stop_camera
 import warnings
+import threading
+import time
+
 warnings.filterwarnings("ignore")
 warnings.simplefilter(action='ignore', category=FutureWarning)
+
+app = Flask(__name__)
 
 # Global variables
 SAMPLE_RATE = 16000
 is_recording = False
 audio_data_buffer = []
-exit_program = False
+recording_thread = None
 
-# Function to record audio
-def record_audio_toggle(sample_rate):
+def recording_callback(indata, frames, time, status):
+    if is_recording:
+        audio_data_buffer.append(indata.copy())
+
+def recording_process():
     global is_recording, audio_data_buffer
-    print("\nPress 'b' to start/stop recording.")
     
-    def callback(indata, frames, time, status):
-        if is_recording:
-            audio_data_buffer.append(indata.copy())
-        else:
-            raise sd.CallbackStop()
-
-    with sd.InputStream(samplerate=sample_rate, channels=1, dtype='float32', callback=callback):
-        while is_recording:
-            pass  # Wait while recording
+    # Set up the InputStream
+    stream = sd.InputStream(
+        samplerate=SAMPLE_RATE,
+        channels=1,
+        dtype='float32',
+        callback=recording_callback
+    )
     
-    audio_data = np.concatenate(audio_data_buffer, axis=0)
-    audio_data_buffer = []  # Clear buffer after saving
-    return np.squeeze(audio_data)
+    # Start the stream
+    stream.start()
+    
+    # Wait while recording is True
+    while is_recording:
+        time.sleep(0.1)
+    
+    # Stop the stream when recording is set to False
+    stream.stop()
+    stream.close()
+    
+    if audio_data_buffer:
+        # Process the recorded audio
+        audio_data = np.concatenate(audio_data_buffer, axis=0)
+        audio_file_path = "Recording.wav"
+        save_audio(audio_data, audio_file_path, SAMPLE_RATE)
+        
+        # Clear the buffer
+        audio_data_buffer.clear()
+        
+        # Process the recording
+        process_recording(audio_file_path)
 
-# Function to save audio as WAV file
 def save_audio(audio_data, file_path, sample_rate):
     write(file_path, sample_rate, (audio_data * 32767).astype(np.int16))
 
-# Main script
-if __name__ == "__main__":
-    print("\nPress 'b' to start/stop recording and 'q' to quit.")
+def process_recording(audio_file_path):
+    # Define file paths upfront
+    file_paths = [
+        'Emotions.txt',
+        'User Response.txt',
+        'Model Response.txt'
+    ]
+    
+    try:
+        # Predict emotion using the SER model
+        predict_emotion(audio_file_path)
+        
+        # Convert speech to text
+        process_audio_from_file(audio_file_path)
+        
+        # Access user input text
+        user_file_path = "User Response.txt"
+        with open(user_file_path, "r") as file:
+            user_text = file.read().strip()
+        
+        if not user_text:
+            print("\nError: The file is empty.")
+            return {"status": "error", "message": "No speech detected in recording"}
+        
+        # TER Model (text emotion recognition)
+        terprocess(user_text)
+        emotions = read_emotions_from_file()
+        
+        # Check if we have all the required emotions
+        if "SER" in emotions and "FER" in emotions and "TER" in emotions:
+            # Determine the common emotion
+            common_emotion = determine_common_emotion(emotions)
+        else:
+            print("\nError: Not all emotion models are available in the file.")
+            common_emotion = "neutral"  # Default fallback
+        
+        # Model response using chat
+        chat_with_model(user_text, common_emotion)
+        
+        # Text-to-speech conversion
+        text_to_speech()
+        
+        # Get the model's response before clearing files
+        with open("Model Response.txt", "r") as file:
+            model_response = file.read().strip()
+        
+        return {"status": "success", "response": model_response}
+        
+    except Exception as e:
+        print(f"Error in processing: {str(e)}")
+        return {"status": "error", "message": f"Processing error: {str(e)}"}
+    
+    finally:
+        # Clear all files regardless of success or failure
+        for file_path in file_paths:
+            try:
+                with open(file_path, "w") as file:
+                    pass
+                print(f"Cleared {file_path}")
+            except Exception as e:
+                print(f"Error clearing {file_path}: {str(e)}")
+    
+@app.route('/api/startRecording', methods=['GET'])
+def start_recording():
+    global is_recording, recording_thread
+    
+    if not is_recording:
+        is_recording = True
+        audio_data_buffer.clear()
+        
+        # Start the camera for facial emotion recognition
+        start_camera()
+        
+        # Start recording in a separate thread
+        recording_thread = threading.Thread(target=recording_process)
+        recording_thread.start()
+        
+        return jsonify({"status": "success", "message": "Recording started"})
+    
+    return jsonify({"status": "error", "message": "Already recording"})
 
-    def on_press(key):
-        global is_recording, exit_program
+@app.route('/api/stopRecording', methods=['GET'])
+def stop_recording():
+    global is_recording, recording_thread
+    
+    if is_recording:
+        is_recording = False
+        
+        # Stop the camera
         try:
-            if key.char == 'b':
-                is_recording = not is_recording
-                if is_recording:
-                    print("Recording started...")
-                    start_camera()
-                else:
-                    print("Recording stopped.")
-                    stop_camera()
-            elif key.char == 'q':
-                exit_program = True
-                print("\nExiting program...")
-                exit
-        except AttributeError:
-            pass
+            stop_camera()
+        except Exception as e:
+            print(f"Error stopping camera: {str(e)}")
+        
+        # Wait for the recording thread to finish
+        if recording_thread:
+            recording_thread.join()
+        
+        # Get the latest model response
+        #model_response = "I didn't catch that. Could you please try again?"
+        try:
+            with open("Model Response.txt", "r") as file:
+                content = file.read().strip()
+                if content:
+                    model_response = content
+        except Exception as e:
+            print(f"Error reading model response: {str(e)}")
+        
+        return jsonify({
+            "status": "success", 
+            "message": "Recording stopped",
+            "response": model_response
+        })
+    
+    return jsonify({"status": "error", "message": "Not recording"})
 
-    listener = keyboard.Listener(on_press=on_press)
-    listener.start()
+@app.route('/api/generateSummary', methods=['GET'])
+def get_summary():
+    if conversation_history:
+        summary = generate_summary(conversation_history)
+        return jsonify({"status": "success", "summary": summary})
+    
+    return jsonify({"status": "error", "message": "No conversation history to summarize"})
 
-    while not exit_program:
-        if is_recording:
-            # Record audio
-            audio_data = record_audio_toggle(SAMPLE_RATE)
+# Enable CORS to allow requests from your Next.js app
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
 
-            # Save recorded audio
-            audio_file_path = "Recording.wav"
-            save_audio(audio_data, audio_file_path, SAMPLE_RATE)
-
-            # Predict emotion using the SER model
-            predict_emotion(audio_file_path)
-
-            # Convert speech to text (if needed)
-            process_audio_from_file(audio_file_path)
-
-            # Access user input text
-            user_file_path = "User Response.txt"
-            with open(user_file_path, "r") as file:
-                user_text = file.read().strip()
-
-            if not user_text:
-                print("\nError: The file is empty.")
-            else:
-                # TER Model (text emotion recognition)
-                terprocess(user_text)
-                emotions = read_emotions_from_file()
-
-                # Check if we have all the required emotions
-                if "SER" in emotions and "FER" in emotions and "TER" in emotions:
-                # Determine the common emotion
-                    common_emotion = determine_common_emotion(emotions)
-                else:
-                    print("\nError: Not all emotion models are available in the file.")
-
-                # Model response using chat
-                chat_with_model(user_text, common_emotion)
-
-                # Text-to-speech conversion
-                text_to_speech()
-            
-            # Clear the file content after processing
-            file_path1=r'Emotions.txt'
-            file_path2=r'User Response.txt'
-            file_path3=r'Model Response.txt'
-            
-            with open(file_path1, "w") as file:
-                pass
-                        
-            with open(file_path2, "w") as file:
-                pass
-            
-            with open(file_path3, "w") as file:
-                pass
-            
-            # Prompt user to redo recording
-            redo = input("\nDo you want to redo the recording? (y/n): ").strip().lower()
-            if redo == 'y':
-                print("\nRedoing the recording...\nPress 'b' to start/stop recording and 'q' to quit.")
-            else:
-                 # 🔹 Generate summary before exiting
-                if conversation_history:  # Ensure the history isn't empty
-                    generate_summary(conversation_history)
-                else:
-                    print("\nNo conversation history found to summarize.")
-                # Exit loop after generating summary
-                break
-    listener.stop()
-
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=5000, debug=True)
